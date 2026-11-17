@@ -1,0 +1,16 @@
+{
+  "name": "vagamatch-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Protótipo VagaMatch: validação de perfil x vaga (filtros ATS) + mensagem para quem abriu a vaga",
+  "scripts": {
+    "start": "node --env-file-if-exists=../.env --env-file-if-exists=.env server.js",
+    "test": "node test_engine.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.9.0",
+    "openai": "^7.57.0",
+    "zod": "^4.6.7"
+  }
+}

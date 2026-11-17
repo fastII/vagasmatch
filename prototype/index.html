@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VagaMatch</title>
+<meta name="description" content="Valide seu perfil contra a vaga como um ATS faria, ajuste o currículo e fale direto com quem abriu a vaga.">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #16181d; --muted: #5d6470; --line: #e3e6ea;
+    --accent: #1f5eff; --accent-ink: #ffffff; --ok: #157347; --ok-bg: #e6f4ec; --bad: #b42318; --bad-bg: #fbeae9;
+    --warn: #9a6700; --warn-bg: #fff4d6; --chip: #eef0f3; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1115; --card: #171a21; --text: #e8eaf0; --muted: #9aa3b2; --line: #272c36;
+      --accent: #5b8cff; --accent-ink: #0b1020; --ok: #4ade80; --ok-bg: #0f2a1c; --bad: #f87171; --bad-bg: #2c1515;
+      --warn: #fbbf24; --warn-bg: #2b2208; --chip: #222733; --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1115; --card: #171a21; --text: #e8eaf0; --muted: #9aa3b2; --line: #272c36;
+    --accent: #5b8cff; --accent-ink: #0b1020; --ok: #4ade80; --ok-bg: #0f2a1c; --bad: #f87171; --bad-bg: #2c1515;
+    --warn: #fbbf24; --warn-bg: #2b2208; --chip: #222733; --shadow: none;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 0 12px; }
+  header h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--chip); font-size: 12px; color: var(--muted); }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .pill.on .dot { background: var(--ok); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .card h2 .step { color: var(--muted); font-weight: 500; font-size: 12px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+  textarea, input, select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; }
+  textarea { min-height: 220px; resize: vertical; font-size: 13px; line-height: 1.45; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 9px 14px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.small { padding: 5px 10px; font-size: 13px; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .score { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .score .n { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+  .score .band { font-size: 18px; font-weight: 600; }
+  .score .verdict { color: var(--muted); width: 100%; }
+  .band-Forte, .band-Bom { color: var(--ok); } .band-Limítrofe { color: var(--warn); } .band-Fraco { color: var(--bad); }
+  .alert { border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 14px; }
+  .alert.bad { background: var(--bad-bg); color: var(--bad); } .alert.warn { background: var(--warn-bg); color: var(--warn); } .alert.ok { background: var(--ok-bg); color: var(--ok); }
+  .alert ul { margin: 6px 0 0 18px; padding: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 4px 10px; border-radius: 999px; font-size: 13px; background: var(--chip); border: 1px solid transparent; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); } .chip.miss { background: var(--bad-bg); color: var(--bad); }
+  .chip.extra { color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .comp { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; font-size: 14px; }
+  .comp b { font-weight: 600; }
+  .comp .m { color: var(--muted); }
+  ul.list { margin: 0; padding-left: 18px; } ul.list li { margin: 4px 0; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--muted); margin-right: 6px; vertical-align: middle; }
+  .tag.eliminatorio { background: var(--bad-bg); color: var(--bad); } .tag.importante { background: var(--warn-bg); color: var(--warn); }
+  .muted { color: var(--muted); }
+  .hidden { display: none !important; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .kpi { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .kpi .v { font-size: 22px; font-weight: 700; } .kpi .l { font-size: 12px; color: var(--muted); }
+  .pipe select { padding: 5px 8px; font-size: 13px; width: auto; }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--muted); border-top-color: transparent; border-radius: 50%; animation: s .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+  .ai-box { white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>VagaMatch</h1>
+      <p>Valide seu perfil contra a vaga como o ATS faria, ajuste o currículo e fale direto com quem abriu a vaga.</p>
+    </div>
+    <span class="pill" id="aiPill"><span class="dot"></span><span id="aiText">verificando IA...</span></span>
+  </header>
+
+  <div class="grid">
+    <section>
+      <div class="card">
+        <h2>Seu currículo <span class="step">passo 1</span></h2>
+        <textarea id="cv" placeholder="Cole aqui o texto do seu currículo (do PDF: selecione tudo, copie e cole)."></textarea>
+        <div class="actions">
+          <input type="file" id="cvFile" accept=".txt,.md,text/plain" style="width:auto">
+          <span class="hint">.txt ou .md. PDF: copie o texto e cole.</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>A vaga <span class="step">passo 2</span></h2>
+        <textarea id="job" placeholder="Cole a descrição completa da vaga (LinkedIn, Gupy, Greenhouse, site da empresa...). A primeira linha vira o nome do cargo."></textarea>
+        <div class="row">
+          <div><label>Empresa</label><input id="empresa" placeholder="ex.: Fintech Y"></div>
+          <div><label>Link da vaga (referência)</label><input id="url" placeholder="https://..."></div>
+          <div><label>Quem abriu a vaga (nome)</label><input id="recrutador" placeholder="ex.: Maria Souza"></div>
+          <div><label>Canal do contato</label>
+            <select id="canal">
+              <option value="linkedin_mensagem">Mensagem no LinkedIn (até 900 caracteres)</option>
+              <option value="linkedin_nota">Nota de conexão no LinkedIn (até 300)</option>
+              <option value="email">E-mail</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="run">Validar match</button>
+          <button id="example">Carregar exemplo</button>
+          <button id="clear">Limpar</button>
+          <span class="hint">Tudo roda no seu navegador. A IA só é usada quando você clica nos botões "com IA".</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="results" class="hidden">
+      <div class="card">
+        <h2>Resultado do filtro ATS</h2>
+        <div class="score">
+          <span class="n" id="scoreN">0</span>
+          <span class="band" id="scoreBand"></span>
+          <span class="verdict" id="scoreVerdict"></span>
+        </div>
+        <div id="knock"></div>
+        <div id="atencao"></div>
+        <div class="comp" id="comp" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <h2>Requisitos obrigatórios <span class="step" id="reqCount"></span></h2>
+        <div class="chips" id="reqChips"></div>
+        <h2 style="margin-top:14px">Diferenciais <span class="step" id="desCount"></span></h2>
+        <div class="chips" id="desChips"></div>
+        <h2 style="margin-top:14px">Você também traz <span class="step">não pedido na vaga</span></h2>
+        <div class="chips" id="extraChips"></div>
+      </div>
+
+      <div class="card">
+        <h2>Sinais que o ATS lê</h2>
+        <table id="sinais"></table>
+      </div>
+
+      <div class="card">
+        <h2>Ajustes no currículo <span class="step">antes de aplicar</span></h2>
+        <ul class="list" id="sugestoes"></ul>
+      </div>
+
+      <div class="card">
+        <h2>Mensagem para quem abriu a vaga</h2>
+        <textarea id="msg" style="min-height:200px"></textarea>
+        <div class="actions">
+          <button id="copyMsg">Copiar</button>
+          <button id="aiMsg" class="primary" disabled>Reescrever com IA</button>
+          <span class="hint" id="msgHint">Versão determinística. Com a IA ligada, a mensagem usa evidências do seu currículo.</span>
+        </div>
+        <div id="followup" class="hidden" style="margin-top:10px">
+          <label>Follow-up (5 dias úteis depois, se não responder)</label>
+          <textarea id="followupText" style="min-height:70px"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Análise do recrutador <span class="step">com IA</span></h2>
+        <div class="actions" style="margin-top:0">
+          <button id="aiAnalyze" class="primary" disabled>Analisar com IA</button>
+          <span class="hint">Pontos fortes com evidência, gaps e como tratar, riscos de ATS, trechos prontos para o currículo e perguntas de triagem com resposta.</span>
+        </div>
+        <div id="aiOut" style="margin-top:12px"></div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="save">Salvar no meu pipeline</button>
+        <span class="hint">Guarda esta vaga, o score e a mensagem no navegador para acompanhar o contato.</span>
+      </div>
+    </section>
+  </div>
+
+  <div class="card pipe">
+    <h2>Meu pipeline <span class="step">regra de negócio: agilidade</span></h2>
+    <div class="kpis" id="kpis"></div>
+    <table id="pipeTable"></table>
+    <p class="hint" id="pipeEmpty">Nenhuma vaga salva ainda. Valide uma vaga e clique em "Salvar no meu pipeline".</p>
+  </div>
+
+  <footer>
+    Privacidade: currículo, vaga e pipeline ficam no seu navegador. Quando você usa um botão "com IA", o texto vai para o servidor local (npm start), que chama a API do provedor de IA configurado (Anthropic ou OpenAI) e não guarda nada.
+  </footer>
+</div>
+
+<script src="taxonomy.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const E = globalThis.VagaMatchEngine;
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let last = null, ai = false, aiBusy = false;
+
+  // ---------------- exemplo
+  const EXEMPLO_CV = `Anderson Silva
+DevOps Engineer Sênior | São Paulo | anderson@example.com | (11) 99999-1234 | linkedin.com/in/anderson
+
+Resumo
+Engenheiro DevOps com mais de 8 anos de experiência em cloud (AWS e OCI), Kubernetes, Terraform e GitOps. Inglês avançado.
+
+Experiência
+Cactus Gaming — DevOps Engineer Sênior — mar/2023 - atual
+- Migração de 30 workloads de EKS para OKE (Oracle Cloud) com ArgoCD e Kustomize
+- Observabilidade com Datadog e Prometheus/Grafana; redução de 40% no MTTR
+- Pipelines CI/CD no GitHub Actions; IaC com Terraform e OpenTofu
+
+Empresa X — SRE Pleno — jan/2019 - fev/2023
+- Operação de clusters k8s em AWS (EKS), Helm, Docker
+- Automação com Python e Bash; Ansible para configuração
+- Kafka (MSK) e PostgreSQL em produção; on-call e post-mortems
+
+Formação
+Bacharelado em Sistemas de Informação — 2012 - 2016
+
+Certificações
+AWS Certified Solutions Architect Associate; CKA`;
+  const EXEMPLO_JOB = `SRE Sênior (remoto)
+
+Responsabilidades
+- Operar e evoluir clusters Kubernetes (EKS) em produção
+- Manter pipelines de CI/CD e GitOps com ArgoCD
+
+Requisitos obrigatórios
+- 5+ anos de experiência com infraestrutura em nuvem (AWS)
+- Kubernetes, Terraform, Docker
+- Observabilidade (Prometheus, Grafana)
+- Inglês avançado
+- Ensino superior completo
+
+Diferenciais
+- GCP
+- Istio ou outro service mesh
+- Certificação CKA
+
+Benefícios
+- Plano de saúde, PJ ou CLT`;
+
+  // ---------------- IA (servidor)
+  async function checkServer() {
+    try {
+      const r = await fetch('/api/health', { cache: 'no-store' });
+      const j = await r.json();
+      ai = !!j.ai;
+      $('#aiPill').classList.toggle('on', ai);
+      $('#aiText').textContent = ai ? `IA ativa (${j.provider} · ${j.model})` : 'IA inativa: ' + (j.aiError || 'sem chave');
+    } catch {
+      ai = false;
+      $('#aiPill').classList.remove('on');
+      $('#aiText').textContent = 'IA inativa: abra via npm start';
+    }
+    $('#aiMsg').disabled = !ai || !last;
+    $('#aiAnalyze').disabled = !ai || !last;
+  }
+  async function post(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({ error: 'resposta inválida do servidor' }));
+    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    return j;
+  }
+  function inputs() {
+    return { cv: $('#cv').value, job: $('#job').value, empresa: $('#empresa').value.trim(), recrutador: $('#recrutador').value.trim(), canal: $('#canal').value, url: $('#url').value.trim() };
+  }
+
+  // ---------------- análise determinística
+  function run() {
+    const i = inputs();
+    if (!i.cv.trim() || !i.job.trim()) { alert('Cole o currículo e a descrição da vaga.'); return; }
+    last = E.analyze(i.cv, i.job, { empresa: i.empresa, recrutador: i.recrutador, canal: i.canal });
+    render(last);
+    $('#results').classList.remove('hidden');
+    $('#aiMsg').disabled = !ai; $('#aiAnalyze').disabled = !ai;
+    $('#aiOut').innerHTML = ''; $('#followup').classList.add('hidden');
+    $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function chips(list, el, kind) {
+    el.innerHTML = list.length ? list.map((s) => `<span class="chip ${kind || (s.ok ? 'ok' : 'miss')}" title="${esc(s.cat ? (VagaMatchTaxonomy.categorias[s.cat] || s.cat) : '')}">${esc(s.name)}${s.ok === false ? ' ✕' : s.ok ? ' ✓' : ''}</span>`).join('')
+      : '<span class="muted">nenhum detectado</span>';
+  }
+
+  function render(r) {
+    $('#scoreN').textContent = r.score;
+    $('#scoreBand').textContent = r.band; $('#scoreBand').className = 'band band-' + r.band;
+    $('#scoreVerdict').textContent = r.veredito;
+    $('#knock').innerHTML = r.knockouts.length ? `<div class="alert bad"><b>Critérios eliminatórios não atendidos</b><ul>${r.knockouts.map((k) => `<li>${esc(k)}</li>`).join('')}</ul></div>` : '<div class="alert ok">Nenhum critério eliminatório detectado.</div>';
+    $('#atencao').innerHTML = r.atencao.length ? `<div class="alert warn"><b>Pontos de atenção</b><ul>${r.atencao.map((k) => `<li>${esc(k)}</li>`).join('')}</ul></div>` : '';
+    const nomes = { required: 'Obrigatórios', desired: 'Diferenciais', years: 'Anos de experiência', seniority: 'Senioridade', english: 'Inglês', education: 'Formação', format: 'Formato p/ ATS' };
+    $('#comp').innerHTML = Object.entries(r.componentes).filter(([, c]) => c.peso > 0).map(([k, c]) => `<b>${nomes[k]} <span class="m">(${c.peso}%)</span></b><span>${Math.round(c.valor * 100)}% <span class="m">· ${esc(c.texto)}</span></span>`).join('');
+    chips(r.skills.required, $('#reqChips')); chips(r.skills.desired, $('#desChips')); chips(r.skills.extras, $('#extraChips'), 'extra');
+    $('#reqCount').textContent = `${r.skills.required.filter((s) => s.ok).length}/${r.skills.required.length}`;
+    $('#desCount').textContent = `${r.skills.desired.filter((s) => s.ok).length}/${r.skills.desired.length}`;
+    const s = r.sinais;
+    const rows = [
+      ['Anos de experiência', s.jobYears ? `${s.jobYears}+` : 'não exige', s.cvYears != null ? s.cvYears : 'não detectado'],
+      ['Senioridade', s.jobSeniority || 'não informada', s.cvSeniority || 'não explícita'],
+      ['Inglês', s.jobEnglish || 'não pede', s.cvEnglish || 'não menciona'],
+      ['Formação superior', s.jobEducationRequired ? 'exige' : 'não exige', s.cvEducation ? 'presente' : 'não encontrada'],
+      ['Modelo / local', [s.jobModel, s.jobCity].filter(Boolean).join(' · ') || 'não informado', s.cvCity || 'não informado'],
+      ['Contrato', s.jobContract.join(' / ') || 'não informado', ''],
+      ['Certificações exigidas', r.skills.certsRequired.map((c) => c.name).join(', ') || 'nenhuma', r.skills.certsMissing.length ? 'faltando: ' + r.skills.certsMissing.map((c) => c.name).join(', ') : (r.skills.certsRequired.length ? 'ok' : '')],
+    ];
+    $('#sinais').innerHTML = `<tr><th>Sinal</th><th>A vaga</th><th>Você</th></tr>` + rows.map((x) => `<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td><td>${esc(x[2])}</td></tr>`).join('');
+    $('#sugestoes').innerHTML = r.sugestoes.length ? r.sugestoes.map((x) => `<li><span class="tag">${esc(x.tipo)}</span>${esc(x.msg)}</li>`).join('') : '<li class="muted">Nada a ajustar.</li>';
+    $('#msg').value = r.mensagem;
+  }
+
+  // ---------------- IA
+  async function aiOutreach() {
+    if (!last || aiBusy) return;
+    aiBusy = true; const b = $('#aiMsg'); const old = b.textContent; b.innerHTML = '<span class="spin"></span>gerando...'; b.disabled = true;
+    try {
+      const i = inputs();
+      const out = await post('/api/outreach', { cv: i.cv, job: i.job, canal: i.canal, recrutador: i.recrutador, empresa: i.empresa, resumo: E.summary(last) });
+      $('#msg').value = (out.data.assunto ? `Assunto: ${out.data.assunto}\n\n` : '') + out.data.mensagem;
+      $('#followupText').value = out.data.follow_up; $('#followup').classList.remove('hidden');
+      $('#msgHint').textContent = `Gerada por ${out.provider} · ${out.model}. Revise antes de enviar: quem envia é você.`;
+    } catch (e) { alert('IA: ' + e.message); }
+    finally { aiBusy = false; b.textContent = old; b.disabled = false; }
+  }
+  async function aiAnalyze() {
+    if (!last || aiBusy) return;
+    aiBusy = true; const b = $('#aiAnalyze'); const old = b.textContent; b.innerHTML = '<span class="spin"></span>analisando...'; b.disabled = true;
+    try {
+      const i = inputs();
+      const out = await post('/api/analyze', { cv: i.cv, job: i.job, resumo: E.summary(last) });
+      const d = out.data;
+      $('#aiOut').innerHTML = `
+        <div class="score"><span class="n">${esc(Math.round(d.score_ia))}</span><span class="band">score do recrutador</span><span class="verdict">${esc(d.veredito)}</span></div>
+        <h2 style="margin-top:12px">Pontos fortes</h2><ul class="list">${d.pontos_fortes.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+        <h2 style="margin-top:12px">Gaps e como tratar</h2><ul class="list">${d.gaps.map((g) => `<li><span class="tag ${esc(g.gravidade)}">${esc(g.gravidade)}</span><b>${esc(g.requisito)}</b>: ${esc(g.como_tratar)}</li>`).join('') || '<li class="muted">nenhum</li>'}</ul>
+        <h2 style="margin-top:12px">Riscos no ATS</h2><ul class="list">${d.riscos_ats.map((x) => `<li>${esc(x)}</li>`).join('') || '<li class="muted">nenhum</li>'}</ul>
+        <h2 style="margin-top:12px">Trechos prontos para o currículo</h2><ul class="list">${d.ajustes_curriculo.map((a) => `<li><b>${esc(a.onde)}</b><div class="ai-box">${esc(a.trecho_sugerido)}</div><span class="muted">${esc(a.motivo)}</span></li>`).join('') || '<li class="muted">nenhum</li>'}</ul>
+        <h2 style="margin-top:12px">Perguntas de triagem prováveis</h2><ul class="list">${d.perguntas_triagem.map((p) => `<li><b>${esc(p.pergunta)}</b><div class="ai-box">${esc(p.resposta_sugerida)}</div></li>`).join('')}</ul>
+        <p class="hint">${esc(out.provider)} · ${esc(out.model)} · tokens entrada ${esc(out.usage.input_tokens)} (cache ${esc(out.usage.cache_read_input_tokens || 0)}) · saída ${esc(out.usage.output_tokens)}</p>`;
+    } catch (e) { alert('IA: ' + e.message); }
+    finally { aiBusy = false; b.textContent = old; b.disabled = false; }
+  }
+
+  // ---------------- pipeline (localStorage)
+  const KEY = 'vagamatch.pipeline.v1';
+  const STATUS = [['validada', 'Validada'], ['contato_enviado', 'Contato enviado'], ['respondeu', 'Respondeu'], ['entrevista', 'Entrevista'], ['proposta', 'Proposta'], ['encerrada', 'Encerrada']];
+  function load() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } }
+  function persist(items) { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch { alert('Não consegui salvar no navegador (modo privado ou armazenamento bloqueado).'); } }
+  function days(a, b) { return Math.round(((b ? new Date(b) : new Date()) - new Date(a)) / 86400000); }
+  function save() {
+    if (!last) return;
+    const i = inputs(); const items = load();
+    items.unshift({ id: Date.now().toString(36), cargo: last.meta.cargo, empresa: i.empresa || '', url: i.url, recrutador: i.recrutador, canal: i.canal, score: last.score, band: last.band, knockouts: last.knockouts.length, status: 'validada', eventos: { validada: new Date().toISOString() }, mensagem: $('#msg').value });
+    persist(items); renderPipe();
+    $('.pipe').scrollIntoView({ behavior: 'smooth' });
+  }
+  function setStatus(id, status) {
+    const items = load(); const it = items.find((x) => x.id === id); if (!it) return;
+    it.status = status; it.eventos[status] = it.eventos[status] || new Date().toISOString(); persist(items); renderPipe();
+  }
+  function remove(id) { persist(load().filter((x) => x.id !== id)); renderPipe(); }
+  function renderPipe() {
+    const items = load();
+    $('#pipeEmpty').classList.toggle('hidden', items.length > 0);
+    const contatos = items.filter((x) => x.eventos.contato_enviado);
+    const retornos = contatos.filter((x) => x.eventos.respondeu || x.eventos.entrevista || x.eventos.proposta);
+    const tempos = retornos.map((x) => days(x.eventos.contato_enviado, x.eventos.respondeu || x.eventos.entrevista || x.eventos.proposta));
+    const media = tempos.length ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : '–';
+    const aguardando = contatos.filter((x) => !retornos.includes(x) && x.status === 'contato_enviado' && days(x.eventos.contato_enviado) >= 5).length;
+    $('#kpis').innerHTML = [
+      [items.length, 'vagas validadas'], [contatos.length, 'contatos enviados'],
+      [contatos.length ? Math.round(retornos.length / contatos.length * 100) + '%' : '–', 'taxa de retorno'],
+      [media, 'dias até o retorno (média)'], [aguardando, 'sem retorno há 5+ dias (fazer follow-up)'],
+    ].map((k) => `<div class="kpi"><div class="v">${esc(k[0])}</div><div class="l">${esc(k[1])}</div></div>`).join('');
+    $('#pipeTable').innerHTML = items.length ? `<tr><th>Vaga</th><th>Score</th><th>Status</th><th>Desde</th><th></th></tr>` + items.map((x) => `
+      <tr>
+        <td><b>${esc(x.cargo)}</b>${x.empresa ? ' · ' + esc(x.empresa) : ''}${x.url ? ` · <a href="${esc(x.url)}" target="_blank" rel="noopener">link</a>` : ''}<div class="hint">${x.recrutador ? esc(x.recrutador) + ' · ' : ''}${esc(x.canal.replace('_', ' '))}${x.knockouts ? ' · <span style="color:var(--bad)">' + x.knockouts + ' eliminatório(s)</span>' : ''}</div></td>
+        <td><span class="band-${esc(x.band)}"><b>${esc(x.score)}</b></span></td>
+        <td><select data-id="${esc(x.id)}">${STATUS.map(([v, l]) => `<option value="${v}" ${v === x.status ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
+        <td class="hint">${days(x.eventos[x.status] || x.eventos.validada)} d</td>
+        <td><button class="small" data-copy="${esc(x.id)}">msg</button> <button class="small" data-del="${esc(x.id)}">x</button></td>
+      </tr>`).join('') : '';
+  }
+  $('#pipeTable').addEventListener('change', (e) => { if (e.target.dataset.id) setStatus(e.target.dataset.id, e.target.value); });
+  $('#pipeTable').addEventListener('click', (e) => {
+    if (e.target.dataset.del) { if (confirm('Remover esta vaga do pipeline?')) remove(e.target.dataset.del); }
+    if (e.target.dataset.copy) { const it = load().find((x) => x.id === e.target.dataset.copy); if (it) navigator.clipboard.writeText(it.mensagem || '').then(() => { e.target.textContent = 'copiado'; setTimeout(() => (e.target.textContent = 'msg'), 1200); }); }
+  });
+
+  // ---------------- eventos
+  $('#run').addEventListener('click', run);
+  $('#example').addEventListener('click', () => { $('#cv').value = EXEMPLO_CV; $('#job').value = EXEMPLO_JOB; $('#empresa').value = 'Fintech Y'; $('#recrutador').value = 'Maria Souza'; run(); });
+  $('#clear').addEventListener('click', () => { ['cv', 'job', 'empresa', 'url', 'recrutador'].forEach((id) => ($('#' + id).value = '')); $('#results').classList.add('hidden'); last = null; });
+  $('#cvFile').addEventListener('change', (e) => { const f = e.target.files[0]; if (!f) return; const fr = new FileReader(); fr.onload = () => ($('#cv').value = fr.result); fr.readAsText(f); });
+  $('#canal').addEventListener('change', () => { if (last) $('#msg').value = E.buildMessage(last, $('#canal').value, E.normalize($('#cv').value)); });
+  $('#copyMsg').addEventListener('click', () => navigator.clipboard.writeText($('#msg').value).then(() => { $('#copyMsg').textContent = 'Copiado'; setTimeout(() => ($('#copyMsg').textContent = 'Copiar'), 1200); }));
+  $('#aiMsg').addEventListener('click', aiOutreach);
+  $('#aiAnalyze').addEventListener('click', aiAnalyze);
+  $('#save').addEventListener('click', save);
+
+  renderPipe();
+  checkServer();
+})();
+</script>
+</body>
+</html>

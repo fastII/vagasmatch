@@ -1,0 +1,11 @@
+{
+  "name": "vagamatch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VagaMatch: validação de perfil x vaga (filtros ATS) + contato com quem abriu a vaga",
+  "workspaces": ["prototype"],
+  "scripts": {
+    "start": "npm start --workspace prototype",
+    "test": "npm test --workspace prototype"
+  }
+}
