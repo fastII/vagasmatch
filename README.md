@@ -46,9 +46,9 @@ docker compose down            # para; `docker compose down -v` apaga também o 
 |---|---|---|---|
 | `web` | nginx + `prototype/index.html`, `engine.js`, `taxonomy.js` | 3080 | serve a página e repassa `/api/*` para a API |
 | `api` | `backend/` (FastAPI + uvicorn) | 3081 | `/api/health`, `/api/analyze`, `/api/outreach` (Claude ou GPT, saída estruturada) e `/api/pipeline`; docs em `/api/docs` |
-| `db` | postgres:17 | interna | tabela `candidaturas` (pipeline); volume `pgdata` |
+| `db` | postgres:17 | 5432 | tabela `candidaturas` (pipeline); volume `pgdata`; `postgresql://vagamatch:vagamatch@localhost:5432/vagamatch` |
 
-A chave fica só no container da API (vem do `.env` via `env_file`). Com o banco presente, a página carrega e salva o pipeline em `/api/pipeline`, e o localStorage vira cache; sem banco (modo `npm start`) continua tudo no navegador. Portas e credenciais do Postgres mudam pelo `.env` (`WEB_PORT`, `API_PORT`, `POSTGRES_*`).
+A chave fica só no container da API (vem do `.env` via `env_file`). Com o banco presente, a página carrega e salva o pipeline em `/api/pipeline`, e o localStorage vira cache; sem banco (modo `npm start`) continua tudo no navegador. Portas e credenciais do Postgres mudam pelo `.env` (`WEB_PORT`, `API_PORT`, `DB_PORT`, `POSTGRES_*`).
 
 Para rodar o backend Python sem Docker: `cd backend && pip install -r requirements.txt && uvicorn app.main:app --port 8000` (usa sqlite local se `DATABASE_URL` não estiver definido).
 

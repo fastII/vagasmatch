@@ -1,7 +1,7 @@
 # VagaMatch: Postgres + API (FastAPI) + front (nginx).
 #   cp .env.example .env   # OPENAI_API_KEY ou ANTHROPIC_API_KEY
 #   docker compose up --build
-#   http://localhost:3080  (API direta em http://localhost:3081/api/health, docs em /api/docs)
+#   http://localhost:3080  (API direta em http://localhost:3081/api/health, docs em /api/docs; Postgres em localhost:5432)
 services:
   db:
     image: postgres:17-alpine
@@ -11,6 +11,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-vagamatch}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"   # acesso direto do host (psql, DBeaver): postgresql://vagamatch:vagamatch@localhost:5432/vagamatch
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vagamatch} -d ${POSTGRES_DB:-vagamatch}"]
       interval: 5s
