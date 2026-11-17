@@ -88,8 +88,8 @@ conversa(id, candidatura_id, direcao, canal, texto, autor(agente|candidato|recru
 | IA | Claude `claude-opus-5-5` ou GPT `gpt-5` pelo mesmo contrato de saída estruturada; prompt caching no system; lote (Batches) para o feed | Qualidade com custo controlado e sem prender o produto a um fornecedor |
 | Extensão | WebExtension (Chrome/Firefox) que envia o DOM da vaga aberta para `/api/ingest` sob clique | Caminho legítimo para LinkedIn e sites sem API |
 | E-mail | Caixa transacional (Resend/SES) com inbound parse para respostas | Canal mais permissivo para automação |
-| Deploy | Containers no OKE (você já tem o `oke-data` vazio), ingress nativo OCI, segredos no OCI Vault via external-secrets | Reusa a plataforma existente |
-| Observabilidade | OpenTelemetry + o que já existe (Datadog) | Medir as métricas de agilidade de ponta a ponta |
+| Deploy | Containers no Cluster Kubernetes |
+| Observabilidade | OpenTelemetry | Medir as métricas de agilidade de ponta a ponta |
 
 ## 6. Fluxo de uma vaga, ponta a ponta
 
