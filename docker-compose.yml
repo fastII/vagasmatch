@@ -1,0 +1,45 @@
+# VagaMatch: Postgres + API (FastAPI) + front (nginx).
+#   cp .env.example .env   # OPENAI_API_KEY ou ANTHROPIC_API_KEY
+#   docker compose up --build
+#   http://localhost:3080  (API direta em http://localhost:3081/api/health, docs em /api/docs; Postgres em localhost:5432)
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vagamatch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vagamatch}
+      POSTGRES_DB: ${POSTGRES_DB:-vagamatch}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"   # acesso direto do host (psql, DBeaver): postgresql://vagamatch:vagamatch@localhost:5432/vagamatch
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vagamatch} -d ${POSTGRES_DB:-vagamatch}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build: ./backend
+    env_file:
+      - path: .env        # chaves e VAGAMATCH_*; opcional (sem ele a IA fica inativa)
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-vagamatch}:${POSTGRES_PASSWORD:-vagamatch}@db:5432/${POSTGRES_DB:-vagamatch}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-3081}:8000"
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-3080}:80"
+
+volumes:
+  pgdata:

@@ -32,6 +32,26 @@ npm test                       # testes do motor (node)
 - A chave fica apenas no servidor, que não persiste currículo nem vaga e não os escreve em log.
 - Clique em **Carregar exemplo** para ver o fluxo completo com um currículo e uma vaga de SRE.
 
+## Rodar com Docker (Postgres + FastAPI + front)
+
+Mesma página, mas com o backend em Python (FastAPI) e o pipeline persistido no Postgres em vez do navegador.
+
+```bash
+cp .env.example .env           # OPENAI_API_KEY ou ANTHROPIC_API_KEY (o compose lê o .env sozinho)
+docker compose up --build      # http://localhost:3080
+docker compose down            # para; `docker compose down -v` apaga também o banco
+```
+
+| Serviço | Imagem | Porta | O que faz |
+|---|---|---|---|
+| `web` | nginx + `prototype/index.html`, `engine.js`, `taxonomy.js` | 3080 | serve a página e repassa `/api/*` para a API |
+| `api` | `backend/` (FastAPI + uvicorn) | 3081 | `/api/health`, `/api/analyze`, `/api/outreach` (Claude ou GPT, saída estruturada) e `/api/pipeline`; docs em `/api/docs` |
+| `db` | postgres:17 | 5432 | tabela `candidaturas` (pipeline); volume `pgdata`; `postgresql://vagamatch:vagamatch@localhost:5432/vagamatch` |
+
+A chave fica só no container da API (vem do `.env` via `env_file`). Com o banco presente, a página carrega e salva o pipeline em `/api/pipeline`, e o localStorage vira cache; sem banco (modo `npm start`) continua tudo no navegador. Portas e credenciais do Postgres mudam pelo `.env` (`WEB_PORT`, `API_PORT`, `DB_PORT`, `POSTGRES_*`).
+
+Para rodar o backend Python sem Docker: `cd backend && pip install -r requirements.txt && uvicorn app.main:app --port 8000` (usa sqlite local se `DATABASE_URL` não estiver definido).
+
 ## Estrutura
 
 ```
@@ -47,6 +67,9 @@ prototype/engine.js       motor ATS determinístico e explicável (browser + nod
 prototype/taxonomy.js     vocabulário técnico com sinônimos (~190 skills, certificações)
 prototype/server.js       servidor estático + /api/analyze e /api/outreach (Claude ou GPT, saída estruturada)
 prototype/test_engine.js  testes do motor
+docker-compose.yml        Postgres + API FastAPI + front nginx
+backend/                  API em Python (FastAPI): app/ai.py (IA), app/db.py (pipeline no Postgres), app/main.py (rotas)
+web/                      nginx.conf e Dockerfile do front
 ```
 
 ## O que o protótipo não faz (ainda)

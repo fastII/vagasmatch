@@ -193,6 +193,7 @@
     <div class="kpis" id="kpis"></div>
     <table id="pipeTable"></table>
     <p class="hint" id="pipeEmpty">Nenhuma vaga salva ainda. Valide uma vaga e clique em "Salvar no meu pipeline".</p>
+    <p class="hint hidden" id="pipeSync"></p>
   </div>
 
   <footer>
@@ -261,10 +262,11 @@ Benefícios
       ai = !!j.ai;
       $('#aiPill').classList.toggle('on', ai);
       $('#aiText').textContent = ai ? `IA ativa (${j.provider} · ${j.model})` : 'IA inativa: ' + (j.aiError || 'sem chave');
+      if (j.db) await syncPipeline();
     } catch {
       ai = false;
       $('#aiPill').classList.remove('on');
-      $('#aiText').textContent = 'IA inativa: abra via npm start';
+      $('#aiText').textContent = 'IA inativa: servidor fora do ar (npm start ou docker compose up)';
     }
     $('#aiMsg').disabled = !ai || !last;
     $('#aiAnalyze').disabled = !ai || !last;
@@ -357,8 +359,29 @@ Benefícios
   // ---------------- pipeline (localStorage)
   const KEY = 'vagamatch.pipeline.v1';
   const STATUS = [['validada', 'Validada'], ['contato_enviado', 'Contato enviado'], ['respondeu', 'Respondeu'], ['entrevista', 'Entrevista'], ['proposta', 'Proposta'], ['encerrada', 'Encerrada']];
+  let dbOn = false; // true quando /api/health diz que o servidor tem banco: o pipeline passa a viver lá
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } }
-  function persist(items) { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch { alert('Não consegui salvar no navegador (modo privado ou armazenamento bloqueado).'); } }
+  function cache(items) { try { localStorage.setItem(KEY, JSON.stringify(items)); return true; } catch { return false; } }
+  function syncNote(t) { const el = $('#pipeSync'); el.textContent = t; el.classList.toggle('hidden', !t); }
+  function persist(items) {
+    const ok = cache(items);
+    if (!ok && !dbOn) alert('Não consegui salvar no navegador (modo privado ou armazenamento bloqueado).');
+    if (dbOn) fetch('/api/pipeline', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(items) })
+      .then((r) => { if (!r.ok) throw new Error(r.status); syncNote('Pipeline salvo no servidor (Postgres).'); })
+      .catch(() => syncNote('Falha ao salvar no servidor; ficou só neste navegador.'));
+  }
+  async function syncPipeline() {
+    try {
+      const r = await fetch('/api/pipeline', { cache: 'no-store' });
+      if (!r.ok) return;
+      const remote = await r.json();
+      const local = load();
+      dbOn = true;
+      if (!remote.length && local.length) { persist(local); } // primeiro uso com banco: sobe o que já existia no navegador
+      else { cache(remote); syncNote('Pipeline carregado do servidor (Postgres).'); }
+      renderPipe();
+    } catch { dbOn = false; }
+  }
   function days(a, b) { return Math.round(((b ? new Date(b) : new Date()) - new Date(a)) / 86400000); }
   function save() {
     if (!last) return;
